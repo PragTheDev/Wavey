@@ -1,18 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Music Visualizer</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="container">
-    <h1>Music Visualizer</h1>
-    <input type="file" id="fileInput" accept="audio/*" />
-    <canvas id="visualizer"></canvas>
-    <audio id="audio" controls></audio>
-  </div>
-  <script src="script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wavey - Music Visualizer</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="background-gradient"></div>
+
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🌊</span>
+        <h1>Wavey</h1>
+      </div>
+      <p class="tagline">Visualize your music in beautiful waves</p>
+    </header>
+
+    <main class="main-content">
+      <div class="upload-section">
+        <div class="upload-card">
+          <div class="upload-icon">🎵</div>
+          <h2>Choose Your Music</h2>
+          <p>Upload an audio file to see the magic happen</p>
+          <label for="fileInput" class="upload-btn">
+            <span>Select Audio File</span>
+            <input type="file" id="fileInput" accept="audio/*" />
+          </label>
+        </div>
+      </div>
+
+      <div class="visualizer-section">
+        <canvas id="visualizer"></canvas>
+        <div class="audio-controls">
+          <audio id="audio" controls></audio>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>&copy; 2025 Wavey. Made with ❤️ for music lovers.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
 </html>
