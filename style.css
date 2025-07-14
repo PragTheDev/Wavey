@@ -224,6 +224,36 @@ body {
   margin-top: 60px;
 }
 
+.visualizer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.viz-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 12px 25px;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.viz-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.viz-btn.active {
+  background: linear-gradient(135deg, #9333ea, #4f46e5);
+  box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .header h1 {
@@ -232,10 +262,6 @@ body {
 
   .upload-card {
     padding: 30px 20px;
-  }
-
-  .upload-icon {
-    font-size: 3rem;
   }
 
   .upload-card h2 {
