@@ -1,8 +1,8 @@
-🎵 Wavey
-A sleek and responsive real-time music visualizer built for the browser. Designed for simplicity.
+### 🎵 Wavey
+## A sleek and responsive real-time music visualizer built for the browser. Designed for simplicity.
 
 
-📁 Local Development
+## 📁 Local Development
 If you'd like to run Wavey locally:
 
 ```bash
@@ -13,7 +13,7 @@ npm run dev
 ```
 
 
-✨ Features
+## ✨ Features
 🎶 Real-time audio visualization from any uploaded track
 
 ⚡ Smooth and responsive canvas animation
