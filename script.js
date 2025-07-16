@@ -7,12 +7,21 @@ const waveModeBtn = document.getElementById("waveMode");
 const circleModeBtn = document.getElementById("circleMode");
 const spectrumModeBtn = document.getElementById("spectrumMode");
 
+const playPauseBtn = document.getElementById("playPauseBtn");
+const playIcon = document.querySelector(".play-icon");
+const pauseIcon = document.querySelector(".pause-icon");
+const trackName = document.getElementById("trackName");
+const progressFill = document.getElementById("progressFill");
+const currentTimeEl = document.getElementById("currentTime");
+const durationEl = document.getElementById("duration");
+const volumeSlider = document.getElementById("volumeSlider");
+const progressBar = document.querySelector(".progress-bar");
+
 canvas.width = window.innerWidth;
 canvas.height = 300;
 
 let currentMode = "bars";
 let animationId;
-
 
 barModeBtn.addEventListener("click", () => {
   currentMode = "bars";
@@ -46,12 +55,64 @@ spectrumModeBtn.addEventListener("click", () => {
   circleModeBtn.classList.remove("active");
 });
 
+playPauseBtn.addEventListener("click", () => {
+  if (audio.paused) {
+    audio.play();
+  } else {
+    audio.pause();
+  }
+});
+
+audio.addEventListener("play", () => {
+  playIcon.style.display = "none";
+  pauseIcon.style.display = "block";
+});
+
+audio.addEventListener("pause", () => {
+  playIcon.style.display = "block";
+  pauseIcon.style.display = "none";
+});
+
+audio.addEventListener("loadedmetadata", () => {
+  durationEl.textContent = formatTime(audio.duration);
+});
+
+audio.addEventListener("timeupdate", () => {
+  const progress = (audio.currentTime / audio.duration) * 100;
+  progressFill.style.width = `${progress}%`;
+  currentTimeEl.textContent = formatTime(audio.currentTime);
+});
+
+progressBar.addEventListener("click", (e) => {
+  const rect = progressBar.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const width = rect.width;
+  const newTime = (clickX / width) * audio.duration;
+  audio.currentTime = newTime;
+});
+
+volumeSlider.addEventListener("input", (e) => {
+  audio.volume = e.target.value / 100;
+});
+
+function formatTime(seconds) {
+  if (isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
 fileInput.addEventListener("change", function () {
   const files = this.files;
   if (files.length === 0) return;
 
-  const fileURL = URL.createObjectURL(files[0]);
+  const file = files[0];
+  const fileURL = URL.createObjectURL(file);
   audio.src = fileURL;
+  audio.volume = volumeSlider.value / 100;
+
+  trackName.textContent = file.name.replace(/\.[^/.]+$/, "");
+
   audio.load();
   audio.play();
 
@@ -132,7 +193,6 @@ function visualize(audioElement) {
     ctx.lineTo(canvas.width, canvas.height / 2);
     ctx.stroke();
 
- 
     ctx.strokeStyle = "#4f46e5";
     ctx.beginPath();
     x = 0;
@@ -151,7 +211,6 @@ function visualize(audioElement) {
     }
 
     ctx.stroke();
-
 
     drawParticles(dataArray, bufferLength);
   }
@@ -177,7 +236,6 @@ function visualize(audioElement) {
     const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) * 0.6;
 
-   
     ctx.strokeStyle = "rgba(147, 51, 234, 0.3)";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -188,12 +246,10 @@ function visualize(audioElement) {
       const barHeight = dataArray[i] * 0.8;
       const angle = (i / bufferLength) * 2 * Math.PI;
 
-   
       const x1 = centerX + Math.cos(angle) * radius;
       const y1 = centerY + Math.sin(angle) * radius;
       const x2 = centerX + Math.cos(angle) * (radius + barHeight * 0.5);
       const y2 = centerY + Math.sin(angle) * (radius + barHeight * 0.5);
-
 
       const hue = (i / bufferLength) * 360;
       const saturation = 70;
@@ -207,7 +263,6 @@ function visualize(audioElement) {
       ctx.stroke();
     }
 
-   
     const avgFrequency =
       dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
     const innerRadius = (avgFrequency / 255) * 40 + 20;
@@ -228,7 +283,6 @@ function visualize(audioElement) {
     ctx.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI);
     ctx.fill();
 
-    
     drawRotatingElements(dataArray, centerX, centerY, radius);
   }
 
@@ -255,9 +309,8 @@ function visualize(audioElement) {
 
   function drawSpectrum(dataArray, bufferLength) {
     const perspective = 0.7;
-    const baseY = canvas.height * 0.8; 
+    const baseY = canvas.height * 0.8;
     const maxHeight = canvas.height * 0.6;
-
 
     const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     bgGradient.addColorStop(0, "rgba(16, 16, 16, 0.9)");
@@ -265,14 +318,11 @@ function visualize(audioElement) {
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-
     drawFloorGrid();
-
 
     for (let i = 0; i < bufferLength; i++) {
       const frequency = dataArray[i];
       const barHeight = (frequency / 255) * maxHeight;
-
 
       const depth = (i / bufferLength) * perspective;
       const scaleFactor = 1 - depth * 0.8;
@@ -282,11 +332,9 @@ function visualize(audioElement) {
       const y = baseY - barHeight * scaleFactor;
       const adjustedHeight = barHeight * scaleFactor;
 
-
       const hue = 240 + (i / bufferLength) * 120; // Blue to red
       const saturation = 80;
       const lightness = 30 + (frequency / 255) * 50;
-
 
       const gradient = ctx.createLinearGradient(x, y, x, y + adjustedHeight);
       gradient.addColorStop(
@@ -321,7 +369,6 @@ function visualize(audioElement) {
         ctx.fillRect(x, baseY, barWidth, adjustedHeight * 0.3);
       }
 
-      
       if (frequency > 128) {
         ctx.shadowColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
         ctx.shadowBlur = 20;
@@ -331,7 +378,6 @@ function visualize(audioElement) {
       }
     }
 
-  
     drawSpectrumParticles(dataArray);
   }
 
@@ -342,7 +388,6 @@ function visualize(audioElement) {
     const gridSize = 40;
     const baseY = canvas.height * 0.8;
 
-
     for (let i = 0; i < 5; i++) {
       const y = baseY + i * gridSize * 0.3;
       const perspective = i * 0.1;
@@ -352,7 +397,6 @@ function visualize(audioElement) {
       ctx.lineTo(canvas.width, y);
       ctx.stroke();
     }
-
 
     for (let i = 0; i <= canvas.width; i += gridSize) {
       ctx.beginPath();

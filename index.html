@@ -43,7 +43,36 @@
         </div>
         <canvas id="visualizer"></canvas>
         <div class="audio-controls">
-          <audio id="audio" controls></audio>
+          <audio id="audio" style="display: none"></audio>
+          <div class="custom-audio-player">
+            <button id="playPauseBtn" class="play-btn">
+              <span class="play-icon">▶</span>
+              <span class="pause-icon" style="display: none">⏸</span>
+            </button>
+            <div class="audio-info">
+              <div class="track-name" id="trackName">No track selected</div>
+              <div class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="time-display">
+                  <span id="currentTime">0:00</span>
+                  <span id="duration">0:00</span>
+                </div>
+              </div>
+            </div>
+            <div class="volume-control">
+              <span class="volume-icon">🔊</span>
+              <input
+                type="range"
+                id="volumeSlider"
+                min="0"
+                max="100"
+                value="70"
+                class="volume-slider"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </main>
