@@ -170,8 +170,12 @@ function visualize(audioElement) {
   }
 
   function drawWaves(dataArray, bufferLength) {
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#9333ea";
+   
+    analyser.getByteTimeDomainData(dataArray);
+
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
     ctx.beginPath();
 
     const sliceWidth = canvas.width / bufferLength;
@@ -190,122 +194,170 @@ function visualize(audioElement) {
       x += sliceWidth;
     }
 
-    ctx.lineTo(canvas.width, canvas.height / 2);
     ctx.stroke();
 
-    ctx.strokeStyle = "#4f46e5";
+
+    analyser.getByteFrequencyData(dataArray);
+
+
+    const avgAmplitude =
+      dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
+
+    if (avgAmplitude > 10) {
+      const gradient = ctx.createRadialGradient(
+        canvas.width / 2,
+        canvas.height / 2,
+        0,
+        canvas.width / 2,
+        canvas.height / 2,
+        canvas.width / 2
+      );
+      gradient.addColorStop(
+        0,
+        `rgba(255, 255, 255, ${(avgAmplitude / 255) * 0.1})`
+      );
+      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
     ctx.beginPath();
-    x = 0;
 
-    for (let i = 0; i < bufferLength; i++) {
-      const v = dataArray[i] / 128.0;
-      const y = canvas.height / 2 + (v * canvas.height) / 4;
+    const points = [];
+    for (let i = 0; i < bufferLength; i += 2) {
+      const amplitude = dataArray[i];
+      const x = (i / bufferLength) * canvas.width;
+      const y = canvas.height / 2 + (amplitude - 128) * 0.8;
+      points.push({ x, y });
+    }
 
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
+
+    if (points.length > 2) {
+      ctx.moveTo(points[0].x, points[0].y);
+
+      for (let i = 1; i < points.length - 1; i++) {
+        const cpx = (points[i].x + points[i + 1].x) / 2;
+        const cpy = (points[i].y + points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, cpx, cpy);
       }
-
-      x += sliceWidth;
     }
 
     ctx.stroke();
 
-    drawParticles(dataArray, bufferLength);
-  }
 
-  function drawParticles(dataArray, bufferLength) {
-    for (let i = 0; i < bufferLength; i += 10) {
+    ctx.globalAlpha = 0.3;
+    for (let i = 0; i < bufferLength; i += 8) {
       const amplitude = dataArray[i];
-      if (amplitude > 50) {
+      if (amplitude > 20) {
         const x = (i / bufferLength) * canvas.width;
-        const y = canvas.height / 2;
-        const radius = (amplitude / 255) * 8;
+        const height = (amplitude / 255) * (canvas.height * 0.4);
 
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = `rgba(147, 51, 234, ${amplitude / 255})`;
-        ctx.fill();
+        ctx.fillStyle = `rgba(255, 255, 255, ${amplitude / 510})`;
+        ctx.fillRect(x, canvas.height - height, 2, height);
       }
     }
+    ctx.globalAlpha = 1;
   }
+
 
   function drawCircle(dataArray, bufferLength) {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) * 0.6;
+    const maxRadius = Math.min(centerX, centerY) * 0.8;
 
-    ctx.strokeStyle = "rgba(147, 51, 234, 0.3)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.stroke();
 
-    for (let i = 0; i < bufferLength; i++) {
-      const barHeight = dataArray[i] * 0.8;
-      const angle = (i / bufferLength) * 2 * Math.PI;
+    const bassRange = dataArray.slice(0, 8);
+    const midRange = dataArray.slice(8, 32);
+    const trebleRange = dataArray.slice(32, 64);
 
-      const x1 = centerX + Math.cos(angle) * radius;
-      const y1 = centerY + Math.sin(angle) * radius;
-      const x2 = centerX + Math.cos(angle) * (radius + barHeight * 0.5);
-      const y2 = centerY + Math.sin(angle) * (radius + barHeight * 0.5);
+    const bassLevel =
+      bassRange.reduce((sum, val) => sum + val, 0) / bassRange.length;
+    const midLevel =
+      midRange.reduce((sum, val) => sum + val, 0) / midRange.length;
+    const trebleLevel =
+      trebleRange.reduce((sum, val) => sum + val, 0) / trebleRange.length;
+    const overallLevel =
+      dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
 
-      const hue = (i / bufferLength) * 360;
-      const saturation = 70;
-      const lightness = 40 + (barHeight / 255) * 40;
 
-      ctx.strokeStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-      ctx.lineWidth = 3;
+    const numLayers = 8;
+
+    for (let layer = 0; layer < numLayers; layer++) {
+      const baseRadius = (maxRadius / numLayers) * (layer + 1);
+
+
+      let amplitude;
+      if (layer < 3) {
+        amplitude = bassLevel;
+      } else if (layer < 6) {
+        amplitude = midLevel; 
+      } else {
+        amplitude = trebleLevel;
+      }
+
+   
+      const pulseAmount = (amplitude / 255) * 20;
+      const currentRadius = baseRadius + pulseAmount;
+
+ 
+      const baseOpacity = 0.1 + layer * 0.05;
+      const amplitudeOpacity = (amplitude / 255) * 0.6;
+      const totalOpacity = Math.min(baseOpacity + amplitudeOpacity, 0.8);
+
+   
+      ctx.strokeStyle = `rgba(255, 255, 255, ${totalOpacity})`;
+      ctx.lineWidth = 2 + (amplitude / 255) * 3; 
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      ctx.arc(centerX, centerY, currentRadius, 0, 2 * Math.PI);
       ctx.stroke();
+
+     
+      if (amplitude > 100) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${(amplitude / 255) * 0.1})`;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, currentRadius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
     }
 
-    const avgFrequency =
-      dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
-    const innerRadius = (avgFrequency / 255) * 40 + 20;
 
-    const gradient = ctx.createRadialGradient(
+    const coreRadius = 15 + (overallLevel / 255) * 25;
+
+  
+    const coreGradient = ctx.createRadialGradient(
       centerX,
       centerY,
       0,
       centerX,
       centerY,
-      innerRadius
+      coreRadius
     );
-    gradient.addColorStop(0, `rgba(147, 51, 234, ${avgFrequency / 255})`);
-    gradient.addColorStop(1, "rgba(147, 51, 234, 0)");
+    coreGradient.addColorStop(
+      0,
+      `rgba(255, 255, 255, ${(overallLevel / 255) * 0.6})`
+    );
+    coreGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = coreGradient;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, innerRadius, 0, 2 * Math.PI);
+    ctx.arc(centerX, centerY, coreRadius, 0, 2 * Math.PI);
     ctx.fill();
 
-    drawRotatingElements(dataArray, centerX, centerY, radius);
-  }
-
-  function drawRotatingElements(dataArray, centerX, centerY, baseRadius) {
-    const time = Date.now() * 0.001;
-
-    for (let i = 0; i < dataArray.length; i += 8) {
-      const amplitude = dataArray[i];
-      if (amplitude > 30) {
-        const angle = (i / dataArray.length) * 2 * Math.PI + time;
-        const distance = baseRadius * 0.7;
-
-        const x = centerX + Math.cos(angle) * distance;
-        const y = centerY + Math.sin(angle) * distance;
-        const size = (amplitude / 255) * 6 + 2;
-
-        ctx.fillStyle = `rgba(79, 70, 229, ${amplitude / 255})`;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, 2 * Math.PI);
-        ctx.fill();
-      }
+    // Outer emphasis ring for very high energy
+    if (overallLevel > 80) {
+      const emphasisRadius = maxRadius + 15 + (overallLevel / 255) * 15;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${(overallLevel / 255) * 0.4})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, emphasisRadius, 0, 2 * Math.PI);
+      ctx.stroke();
     }
   }
+
 
   function drawSpectrum(dataArray, bufferLength) {
     const perspective = 0.7;
@@ -332,7 +384,7 @@ function visualize(audioElement) {
       const y = baseY - barHeight * scaleFactor;
       const adjustedHeight = barHeight * scaleFactor;
 
-      const hue = 240 + (i / bufferLength) * 120; // Blue to red
+      const hue = 240 + (i / bufferLength) * 120;
       const saturation = 80;
       const lightness = 30 + (frequency / 255) * 50;
 
