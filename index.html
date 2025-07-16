@@ -36,10 +36,38 @@
 
       <div class="visualizer-section">
         <div class="visualizer-controls">
-          <button id="barMode" class="viz-btn active">Bars</button>
-          <button id="waveMode" class="viz-btn">Waves</button>
-          <button id="circleMode" class="viz-btn">Circle</button>
-          <button id="spectrumMode" class="viz-btn">Spectrum</button>
+          <div class="control-group">
+            <label class="control-label">Visualization</label>
+            <div class="button-group">
+              <button id="barMode" class="viz-btn active">Bars</button>
+              <button id="waveMode" class="viz-btn">Waves</button>
+              <button id="circleMode" class="viz-btn">Circle</button>
+              <button id="spectrumMode" class="viz-btn">Spectrum</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Theme</label>
+            <div class="button-group">
+              <button id="minimalTheme" class="theme-btn active">
+                Minimal
+              </button>
+              <button id="neonTheme" class="theme-btn">Neon</button>
+              <button id="retroTheme" class="theme-btn">Retro</button>
+              <button id="rainbowTheme" class="theme-btn">Rainbow</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Effects</label>
+            <div class="button-group">
+              <button id="particlesToggle" class="effect-btn">Particles</button>
+              <button id="backgroundToggle" class="effect-btn">
+                Background
+              </button>
+              <button id="fullscreenBtn" class="effect-btn">Fullscreen</button>
+            </div>
+          </div>
         </div>
         <canvas id="visualizer"></canvas>
         <div class="audio-controls">

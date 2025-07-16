@@ -7,6 +7,15 @@ const waveModeBtn = document.getElementById("waveMode");
 const circleModeBtn = document.getElementById("circleMode");
 const spectrumModeBtn = document.getElementById("spectrumMode");
 
+const minimalThemeBtn = document.getElementById("minimalTheme");
+const neonThemeBtn = document.getElementById("neonTheme");
+const retroThemeBtn = document.getElementById("retroTheme");
+const rainbowThemeBtn = document.getElementById("rainbowTheme");
+
+const particlesToggleBtn = document.getElementById("particlesToggle");
+const backgroundToggleBtn = document.getElementById("backgroundToggle");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+
 const playPauseBtn = document.getElementById("playPauseBtn");
 const playIcon = document.querySelector(".play-icon");
 const pauseIcon = document.querySelector(".pause-icon");
@@ -21,38 +30,207 @@ canvas.width = window.innerWidth;
 canvas.height = 300;
 
 let currentMode = "bars";
+let currentTheme = "minimal";
+let particlesEnabled = false;
+let backgroundEnabled = false;
+let isFullscreen = false;
 let animationId;
+let particles = [];
+
+const themes = {
+  minimal: {
+    primary: [255, 255, 255],
+    secondary: [200, 200, 200],
+    accent: [150, 150, 150],
+    background: [0, 0, 0],
+  },
+  neon: {
+    primary: [0, 255, 255],
+    secondary: [255, 0, 255],
+    accent: [255, 255, 0],
+    background: [10, 0, 20],
+  },
+  retro: {
+    primary: [255, 100, 150],
+    secondary: [100, 200, 255],
+    accent: [255, 200, 100],
+    background: [20, 10, 30],
+  },
+  rainbow: {
+    primary: [255, 0, 0],
+    secondary: [0, 255, 0],
+    accent: [0, 0, 255],
+    background: [5, 5, 5],
+  },
+};
+
+class Particle {
+  constructor(x, y, amplitude) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 4;
+    this.vy = (Math.random() - 0.5) * 4;
+    this.life = 1.0;
+    this.decay = 0.005 + Math.random() * 0.01;
+    this.size = 2 + (amplitude / 255) * 6;
+    this.baseSize = this.size;
+    this.amplitude = amplitude;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+    this.size = this.baseSize * this.life;
+    this.vy += 0.1;
+  }
+
+  draw(ctx, theme) {
+    if (this.life <= 0) return;
+
+    const [r, g, b] = theme.primary;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${this.life})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.shadowColor = `rgb(${r}, ${g}, ${b})`;
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+}
 
 barModeBtn.addEventListener("click", () => {
-  currentMode = "bars";
-  barModeBtn.classList.add("active");
-  waveModeBtn.classList.remove("active");
-  circleModeBtn.classList.remove("active");
-  spectrumModeBtn.classList.remove("active");
+  setActiveMode("bars", barModeBtn);
 });
 
 waveModeBtn.addEventListener("click", () => {
-  currentMode = "waves";
-  waveModeBtn.classList.add("active");
-  barModeBtn.classList.remove("active");
-  circleModeBtn.classList.remove("active");
-  spectrumModeBtn.classList.remove("active");
+  setActiveMode("waves", waveModeBtn);
 });
 
 circleModeBtn.addEventListener("click", () => {
-  currentMode = "circle";
-  circleModeBtn.classList.add("active");
-  barModeBtn.classList.remove("active");
-  waveModeBtn.classList.remove("active");
-  spectrumModeBtn.classList.remove("active");
+  setActiveMode("circle", circleModeBtn);
 });
 
 spectrumModeBtn.addEventListener("click", () => {
-  currentMode = "spectrum";
-  spectrumModeBtn.classList.add("active");
-  barModeBtn.classList.remove("active");
-  waveModeBtn.classList.remove("active");
-  circleModeBtn.classList.remove("active");
+  setActiveMode("spectrum", spectrumModeBtn);
+});
+
+minimalThemeBtn.addEventListener("click", () => {
+  setActiveTheme("minimal", minimalThemeBtn);
+});
+
+neonThemeBtn.addEventListener("click", () => {
+  setActiveTheme("neon", neonThemeBtn);
+});
+
+retroThemeBtn.addEventListener("click", () => {
+  setActiveTheme("retro", retroThemeBtn);
+});
+
+rainbowThemeBtn.addEventListener("click", () => {
+  setActiveTheme("rainbow", rainbowThemeBtn);
+});
+
+particlesToggleBtn.addEventListener("click", () => {
+  particlesEnabled = !particlesEnabled;
+  particlesToggleBtn.classList.toggle("active", particlesEnabled);
+  if (!particlesEnabled) {
+    particles = [];
+  }
+});
+
+backgroundToggleBtn.addEventListener("click", () => {
+  backgroundEnabled = !backgroundEnabled;
+  backgroundToggleBtn.classList.toggle("active", backgroundEnabled);
+});
+
+fullscreenBtn.addEventListener("click", () => {
+  toggleFullscreen();
+});
+
+function setActiveMode(mode, btn) {
+  currentMode = mode;
+  document
+    .querySelectorAll(".viz-btn")
+    .forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+function setActiveTheme(theme, btn) {
+  currentTheme = theme;
+  document
+    .querySelectorAll(".theme-btn")
+    .forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+function toggleFullscreen() {
+  if (!isFullscreen) {
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    } else if (document.documentElement.webkitRequestFullscreen) {
+      document.documentElement.webkitRequestFullscreen();
+    } else if (document.documentElement.msRequestFullscreen) {
+      document.documentElement.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+document.addEventListener("msfullscreenchange", handleFullscreenChange);
+
+function handleFullscreenChange() {
+  const isCurrentlyFullscreen =
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.msFullscreenElement;
+
+  if (isCurrentlyFullscreen) {
+    isFullscreen = true;
+    fullscreenBtn.classList.add("active");
+    document.body.classList.add("fullscreen-mode");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    document.querySelector(".header").style.display = "none";
+    document.querySelector(".upload-section").style.display = "none";
+    document.querySelector(".footer").style.display = "none";
+    document.querySelector(".visualizer-controls").style.display = "none";
+    document.querySelector(".audio-controls").style.display = "none";
+  } else {
+    isFullscreen = false;
+    fullscreenBtn.classList.remove("active");
+    document.body.classList.remove("fullscreen-mode");
+    canvas.width = window.innerWidth;
+    canvas.height = 300;
+
+    document.querySelector(".header").style.display = "block";
+    document.querySelector(".upload-section").style.display = "block";
+    document.querySelector(".footer").style.display = "block";
+    document.querySelector(".visualizer-controls").style.display = "flex";
+    document.querySelector(".audio-controls").style.display = "block";
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isFullscreen) {
+    toggleFullscreen();
+  }
 });
 
 playPauseBtn.addEventListener("click", () => {
@@ -136,21 +314,98 @@ function visualize(audioElement) {
 
     analyser.getByteFrequencyData(dataArray);
 
-    ctx.fillStyle = "#000";
+    const theme = themes[currentTheme];
+    const [r, g, b] = theme.background;
+    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    if (backgroundEnabled) {
+      drawBackgroundPattern(dataArray, theme);
+    }
+
     if (currentMode === "bars") {
-      drawBars(dataArray, bufferLength);
+      drawBars(dataArray, bufferLength, theme);
     } else if (currentMode === "waves") {
-      drawWaves(dataArray, bufferLength);
+      drawWaves(dataArray, bufferLength, theme);
     } else if (currentMode === "circle") {
-      drawCircle(dataArray, bufferLength);
+      drawCircle(dataArray, bufferLength, theme);
     } else if (currentMode === "spectrum") {
-      drawSpectrum(dataArray, bufferLength);
+      drawSpectrum(dataArray, bufferLength, theme);
+    }
+
+    if (particlesEnabled) {
+      updateParticles(dataArray, theme);
+      drawParticles(theme);
     }
   }
 
-  function drawBars(dataArray, bufferLength) {
+  function drawBackgroundPattern(dataArray, theme) {
+    const time = Date.now() * 0.001;
+    const avgAmplitude =
+      dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
+
+    ctx.strokeStyle = `rgba(${theme.primary[0]}, ${theme.primary[1]}, ${
+      theme.primary[2]
+    }, ${0.1 + (avgAmplitude / 255) * 0.2})`;
+    ctx.lineWidth = 1;
+
+    const gridSize = 50 + Math.sin(time) * 10;
+
+    for (let x = 0; x < canvas.width; x += gridSize) {
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        const amplitude =
+          dataArray[Math.floor((x / canvas.width) * bufferLength)] || 0;
+        const pulse = (amplitude / 255) * 10;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 2 + pulse, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const amplitude = dataArray[i * 12] || 0;
+      const alpha = (amplitude / 255) * 0.3;
+
+      ctx.strokeStyle = `rgba(${theme.secondary[0]}, ${theme.secondary[1]}, ${theme.secondary[2]}, ${alpha})`;
+      ctx.lineWidth = 1 + (amplitude / 255) * 3;
+
+      const offset = (time * 50 + i * 100) % (canvas.width + 200);
+      ctx.beginPath();
+      ctx.moveTo(offset - 200, 0);
+      ctx.lineTo(offset, canvas.height);
+      ctx.stroke();
+    }
+  }
+
+  function updateParticles(dataArray, theme) {
+    particles = particles.filter((p) => !p.isDead());
+
+    const bassLevel =
+      dataArray.slice(0, 8).reduce((sum, val) => sum + val, 0) / 8;
+
+    if (bassLevel > 100 && Math.random() < 0.3) {
+      const numParticles = Math.floor((bassLevel / 255) * 5) + 1;
+
+      for (let i = 0; i < numParticles; i++) {
+        particles.push(
+          new Particle(
+            Math.random() * canvas.width,
+            canvas.height + 10,
+            bassLevel
+          )
+        );
+      }
+    }
+
+    particles.forEach((particle) => particle.update());
+  }
+
+  function drawParticles(theme) {
+    particles.forEach((particle) => particle.draw(ctx, theme));
+  }
+
+  function drawBars(dataArray, bufferLength, theme) {
     const barWidth = (canvas.width / bufferLength) * 2.5;
     let barHeight;
     let x = 0;
@@ -158,24 +413,37 @@ function visualize(audioElement) {
     for (let i = 0; i < bufferLength; i++) {
       barHeight = dataArray[i];
 
-      const r = barHeight + 25;
-      const g = 250 - barHeight;
-      const b = 50;
+      let color;
+      if (currentTheme === "rainbow") {
+        const hue = (i / bufferLength) * 360;
+        color = `hsl(${hue}, 70%, ${50 + (barHeight / 255) * 30}%)`;
+      } else {
+        const intensity = barHeight / 255;
+        const [r, g, b] = theme.primary;
+        color = `rgba(${r}, ${g}, ${b}, ${0.6 + intensity * 0.4})`;
+      }
 
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillStyle = color;
       ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+      if (barHeight > 128) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        ctx.shadowBlur = 0;
+      }
 
       x += barWidth + 1;
     }
   }
 
-  function drawWaves(dataArray, bufferLength) {
-   
+  function drawWaves(dataArray, bufferLength, theme) {
     analyser.getByteTimeDomainData(dataArray);
 
+    const [r, g, b] = theme.primary;
 
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
     ctx.beginPath();
 
     const sliceWidth = canvas.width / bufferLength;
@@ -196,9 +464,7 @@ function visualize(audioElement) {
 
     ctx.stroke();
 
-
     analyser.getByteFrequencyData(dataArray);
-
 
     const avgAmplitude =
       dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
@@ -214,17 +480,17 @@ function visualize(audioElement) {
       );
       gradient.addColorStop(
         0,
-        `rgba(255, 255, 255, ${(avgAmplitude / 255) * 0.1})`
+        `rgba(${r}, ${g}, ${b}, ${(avgAmplitude / 255) * 0.1})`
       );
-      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-
+    const [sr, sg, sb] = theme.secondary;
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.strokeStyle = `rgba(${sr}, ${sg}, ${sb}, 0.4)`;
     ctx.beginPath();
 
     const points = [];
@@ -234,7 +500,6 @@ function visualize(audioElement) {
       const y = canvas.height / 2 + (amplitude - 128) * 0.8;
       points.push({ x, y });
     }
-
 
     if (points.length > 2) {
       ctx.moveTo(points[0].x, points[0].y);
@@ -248,7 +513,6 @@ function visualize(audioElement) {
 
     ctx.stroke();
 
-
     ctx.globalAlpha = 0.3;
     for (let i = 0; i < bufferLength; i += 8) {
       const amplitude = dataArray[i];
@@ -256,19 +520,17 @@ function visualize(audioElement) {
         const x = (i / bufferLength) * canvas.width;
         const height = (amplitude / 255) * (canvas.height * 0.4);
 
-        ctx.fillStyle = `rgba(255, 255, 255, ${amplitude / 510})`;
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${amplitude / 510})`;
         ctx.fillRect(x, canvas.height - height, 2, height);
       }
     }
     ctx.globalAlpha = 1;
   }
 
-
-  function drawCircle(dataArray, bufferLength) {
+  function drawCircle(dataArray, bufferLength, theme) {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const maxRadius = Math.min(centerX, centerY) * 0.8;
-
 
     const bassRange = dataArray.slice(0, 8);
     const midRange = dataArray.slice(8, 32);
@@ -283,51 +545,60 @@ function visualize(audioElement) {
     const overallLevel =
       dataArray.reduce((sum, val) => sum + val, 0) / bufferLength;
 
-
     const numLayers = 8;
 
     for (let layer = 0; layer < numLayers; layer++) {
       const baseRadius = (maxRadius / numLayers) * (layer + 1);
 
-
       let amplitude;
       if (layer < 3) {
         amplitude = bassLevel;
       } else if (layer < 6) {
-        amplitude = midLevel; 
+        amplitude = midLevel;
       } else {
         amplitude = trebleLevel;
       }
 
-   
       const pulseAmount = (amplitude / 255) * 20;
       const currentRadius = baseRadius + pulseAmount;
 
- 
-      const baseOpacity = 0.1 + layer * 0.05;
-      const amplitudeOpacity = (amplitude / 255) * 0.6;
-      const totalOpacity = Math.min(baseOpacity + amplitudeOpacity, 0.8);
+      let strokeColor;
+      if (currentTheme === "rainbow") {
+        const hue = (layer / numLayers) * 360;
+        strokeColor = `hsla(${hue}, 70%, 60%, ${
+          0.1 + layer * 0.05 + (amplitude / 255) * 0.6
+        })`;
+      } else {
+        const [r, g, b] = theme.primary;
+        const baseOpacity = 0.1 + layer * 0.05;
+        const amplitudeOpacity = (amplitude / 255) * 0.6;
+        const totalOpacity = Math.min(baseOpacity + amplitudeOpacity, 0.8);
+        strokeColor = `rgba(${r}, ${g}, ${b}, ${totalOpacity})`;
+      }
 
-   
-      ctx.strokeStyle = `rgba(255, 255, 255, ${totalOpacity})`;
-      ctx.lineWidth = 2 + (amplitude / 255) * 3; 
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2 + (amplitude / 255) * 3;
       ctx.beginPath();
       ctx.arc(centerX, centerY, currentRadius, 0, 2 * Math.PI);
       ctx.stroke();
 
-     
       if (amplitude > 100) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${(amplitude / 255) * 0.1})`;
+        if (currentTheme === "rainbow") {
+          const hue = (layer / numLayers) * 360;
+          ctx.fillStyle = `hsla(${hue}, 70%, 60%, ${(amplitude / 255) * 0.1})`;
+        } else {
+          const [r, g, b] = theme.primary;
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(amplitude / 255) * 0.1})`;
+        }
         ctx.beginPath();
         ctx.arc(centerX, centerY, currentRadius, 0, 2 * Math.PI);
         ctx.fill();
       }
     }
 
-
     const coreRadius = 15 + (overallLevel / 255) * 25;
 
-  
+    const [r, g, b] = theme.accent;
     const coreGradient = ctx.createRadialGradient(
       centerX,
       centerY,
@@ -338,19 +609,21 @@ function visualize(audioElement) {
     );
     coreGradient.addColorStop(
       0,
-      `rgba(255, 255, 255, ${(overallLevel / 255) * 0.6})`
+      `rgba(${r}, ${g}, ${b}, ${(overallLevel / 255) * 0.6})`
     );
-    coreGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+    coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
 
     ctx.fillStyle = coreGradient;
     ctx.beginPath();
     ctx.arc(centerX, centerY, coreRadius, 0, 2 * Math.PI);
     ctx.fill();
 
-    // Outer emphasis ring for very high energy
     if (overallLevel > 80) {
       const emphasisRadius = maxRadius + 15 + (overallLevel / 255) * 15;
-      ctx.strokeStyle = `rgba(255, 255, 255, ${(overallLevel / 255) * 0.4})`;
+      const [sr, sg, sb] = theme.secondary;
+      ctx.strokeStyle = `rgba(${sr}, ${sg}, ${sb}, ${
+        (overallLevel / 255) * 0.4
+      })`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(centerX, centerY, emphasisRadius, 0, 2 * Math.PI);
@@ -358,8 +631,7 @@ function visualize(audioElement) {
     }
   }
 
-
-  function drawSpectrum(dataArray, bufferLength) {
+  function drawSpectrum(dataArray, bufferLength, theme) {
     const perspective = 0.7;
     const baseY = canvas.height * 0.8;
     const maxHeight = canvas.height * 0.6;
@@ -370,7 +642,7 @@ function visualize(audioElement) {
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    drawFloorGrid();
+    drawFloorGrid(theme);
 
     for (let i = 0; i < bufferLength; i++) {
       const frequency = dataArray[i];
@@ -430,11 +702,12 @@ function visualize(audioElement) {
       }
     }
 
-    drawSpectrumParticles(dataArray);
+    drawSpectrumParticles(dataArray, theme);
   }
 
-  function drawFloorGrid() {
-    ctx.strokeStyle = "rgba(147, 51, 234, 0.2)";
+  function drawFloorGrid(theme) {
+    const [r, g, b] = theme.secondary;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
     ctx.lineWidth = 1;
 
     const gridSize = 40;
@@ -458,7 +731,7 @@ function visualize(audioElement) {
     }
   }
 
-  function drawSpectrumParticles(dataArray) {
+  function drawSpectrumParticles(dataArray, theme) {
     const time = Date.now() * 0.003;
 
     for (let i = 0; i < dataArray.length; i += 15) {
@@ -469,14 +742,21 @@ function visualize(audioElement) {
         const y = canvas.height * 0.2 + Math.cos(time + i) * 50;
         const size = (amplitude / 255) * 4 + 1;
 
-        const hue = 240 + (i / dataArray.length) * 120;
-        ctx.fillStyle = `hsla(${hue}, 70%, 60%, ${amplitude / 255})`;
+        let color;
+        if (currentTheme === "rainbow") {
+          const hue = 240 + (i / dataArray.length) * 120;
+          color = `hsla(${hue}, 70%, 60%, ${amplitude / 255})`;
+        } else {
+          const [r, g, b] = theme.primary;
+          color = `rgba(${r}, ${g}, ${b}, ${amplitude / 255})`;
+        }
 
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(x, y, size, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.shadowColor = `hsl(${hue}, 70%, 60%)`;
+        ctx.shadowColor = color;
         ctx.shadowBlur = 10;
         ctx.fill();
         ctx.shadowBlur = 0;
